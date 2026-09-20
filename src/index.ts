@@ -44,6 +44,8 @@ function createServer() {
                     error: "Upstream portfolio request failed",
                     status: response.status,
                     statusText: response.statusText,
+                    requestedUrl: url,
+                    responseUrl: response.url,
                     fetchedAt: new Date().toISOString(),
                   },
                   null,
