@@ -128,7 +128,7 @@ export default {
     }
 
     if (url.pathname === "/mcp") {
-      return createMcpHandler(createServer())(request, env, ctx);
+      return createMcpHandler(createServer)(request, env, ctx);
     }
 
     return new Response("Not Found", { status: 404 });
