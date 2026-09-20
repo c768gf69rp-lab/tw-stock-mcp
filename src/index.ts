@@ -21,17 +21,11 @@ function createServer() {
         const url = PORTFOLIO_URL;
 
         const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Cache-Control": "no-cache, no-store",
-            Pragma: "no-cache",
-          },
-          cf: {
-            cacheEverything: false,
-            cacheTtl: 0,
-          },
-        });
+        method: "GET",
+        headers: {
+        Accept: "application/json",
+        },
+      });
 
         if (!response.ok) {
           return {
