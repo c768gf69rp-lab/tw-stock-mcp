@@ -1,14 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
+import { env } from "cloudflare:workers";
 
 interface Env {
   STOCK_API: Fetcher;
 }
 
-const PORTFOLIO_URL =
-  "https://tw-stock-api.9vt2n7nrm4.workers.dev/portfolio";
-
-function createServer(env: Env) {
+function createServer() {
   const server = new McpServer({
     name: "Taiwan Stock Live Quotes",
     version: "1.0.0",
@@ -18,53 +16,43 @@ function createServer(env: Env) {
     "get_portfolio",
     {
       description:
-        "取得使用者追蹤的台股即時行情。資料直接來自使用者的 Cloudflare Worker 與 Fugle。包含南亞科2408、國巨2327、穩懋3105、禾伸堂3026的最新成交價、今日最高最低、漲跌幅、成交量、買賣報價與五檔等資訊。每次呼叫都應重新向上游取得資料，不可把舊資料當成即時行情。",
+        "取得使用者追蹤的台股即時行情。資料直接來自 Cloudflare Worker 與 Fugle，包含南亞科2408、國巨2327、穩懋3105、禾伸堂3026。",
     },
     async () => {
       try {
-        const url = PORTFOLIO_URL;
-
-        const response = await env.STOCK_API.fetch(
-  new Request("https://internal/portfolio", {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-    },
-  })
-);
+        const response = await (env as Env).STOCK_API.fetch(
+          new Request("https://internal/portfolio", {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          })
+        );
 
         if (!response.ok) {
-  const responseBody = await response.text();
+          const responseBody = await response.text();
 
-  const responseHeaders: Record<string, string> = {};
-  response.headers.forEach((value, key) => {
-    responseHeaders[key] = value;
-  });
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            success: false,
-            error: "Upstream portfolio request failed",
-            status: response.status,
-            statusText: response.statusText,
-            requestedUrl: url,
-            responseUrl: response.url,
-            responseBody,
-            responseHeaders,
-            fetchedAt: new Date().toISOString(),
-          },
-          null,
-          2
-        ),
-      },
-    ],
-    isError: true,
-  };
-}
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(
+                  {
+                    success: false,
+                    error: "Upstream portfolio request failed",
+                    status: response.status,
+                    statusText: response.statusText,
+                    responseBody,
+                    fetchedAt: new Date().toISOString(),
+                  },
+                  null,
+                  2
+                ),
+              },
+            ],
+            isError: true,
+          };
+        }
 
         const data = await response.json();
 
@@ -75,7 +63,7 @@ function createServer(env: Env) {
               text: JSON.stringify(
                 {
                   success: true,
-                  source: "Cloudflare Worker / Fugle",
+                  source: "Cloudflare Service Binding / Fugle",
                   mcpFetchedAt: new Date().toISOString(),
                   data,
                 },
@@ -114,7 +102,7 @@ function createServer(env: Env) {
 }
 
 export default {
-  fetch(request: Request, env: unknown, ctx: ExecutionContext) {
+  fetch(request: Request, workerEnv: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
 
     if (url.pathname === "/") {
@@ -125,6 +113,7 @@ export default {
             status: "ok",
             mcpEndpoint: "/mcp",
             tools: ["get_portfolio"],
+            serviceBinding: "STOCK_API",
           },
           null,
           2
@@ -139,9 +128,9 @@ export default {
     }
 
     if (url.pathname === "/mcp") {
-      return createMcpHandler(() => createServer(env as Env))(request, env, ctx);
+      return createMcpHandler(createServer)(request, workerEnv, ctx);
     }
 
     return new Response("Not Found", { status: 404 });
   },
-};
+} satisfies ExportedHandler<Env>;
