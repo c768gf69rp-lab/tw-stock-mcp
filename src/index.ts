@@ -18,7 +18,7 @@ function createServer() {
     },
     async () => {
       try {
-        const url = `${PORTFOLIO_URL}?mcp=${Date.now()}`;
+        const url = PORTFOLIO_URL;
 
         const response = await fetch(url, {
           method: "GET",
