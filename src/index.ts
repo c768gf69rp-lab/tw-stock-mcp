@@ -1,10 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { createMcpHandler } from "agents/mcp/server";
 
+interface Env {
+  STOCK_API: Fetcher;
+}
+
 const PORTFOLIO_URL =
   "https://tw-stock-api.9vt2n7nrm4.workers.dev/portfolio";
 
-function createServer() {
+function createServer(env: Env) {
   const server = new McpServer({
     name: "Taiwan Stock Live Quotes",
     version: "1.0.0",
@@ -20,12 +24,14 @@ function createServer() {
       try {
         const url = PORTFOLIO_URL;
 
-        const response = await fetch(url, {
-        method: "GET",
-        headers: {
-        Accept: "application/json",
-        },
-      });
+        const response = await env.STOCK_API.fetch(
+  new Request("https://internal/portfolio", {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+  })
+);
 
         if (!response.ok) {
   const responseBody = await response.text();
@@ -133,7 +139,7 @@ export default {
     }
 
     if (url.pathname === "/mcp") {
-      return createMcpHandler(createServer)(request, env, ctx);
+      return createMcpHandler(() => createServer(env as Env))(request, env, ctx);
     }
 
     return new Response("Not Found", { status: 404 });
