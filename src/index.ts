@@ -28,28 +28,37 @@ function createServer() {
       });
 
         if (!response.ok) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(
-                  {
-                    success: false,
-                    error: "Upstream portfolio request failed",
-                    status: response.status,
-                    statusText: response.statusText,
-                    requestedUrl: url,
-                    responseUrl: response.url,
-                    fetchedAt: new Date().toISOString(),
-                  },
-                  null,
-                  2
-                ),
-              },
-            ],
-            isError: true,
-          };
-        }
+  const responseBody = await response.text();
+
+  const responseHeaders: Record<string, string> = {};
+  response.headers.forEach((value, key) => {
+    responseHeaders[key] = value;
+  });
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            success: false,
+            error: "Upstream portfolio request failed",
+            status: response.status,
+            statusText: response.statusText,
+            requestedUrl: url,
+            responseUrl: response.url,
+            responseBody,
+            responseHeaders,
+            fetchedAt: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+      },
+    ],
+    isError: true,
+  };
+}
 
         const data = await response.json();
 
